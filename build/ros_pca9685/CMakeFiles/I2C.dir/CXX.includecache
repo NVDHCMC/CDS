@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/ubuntu/catkin_ws/src/ros_pca9685/src/lib/I2C/src/I2C.cpp
+sys/ioctl.h
+-
+errno.h
+-
+stdio.h
+-
+fcntl.h
+-
+unistd.h
+-
+linux/i2c.h
+-
+syslog.h
+-
+I2C.h
+/home/ubuntu/catkin_ws/src/ros_pca9685/src/lib/I2C/src/I2C.h
+
+/home/ubuntu/catkin_ws/src/ros_pca9685/src/lib/I2C/src/I2C.h
+inttypes.h
+-
+

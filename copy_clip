@@ -1,0 +1,2 @@
+#!/bin/bash
+mv ~/jupyter/output.avi /media/ubuntu/Backup_data/output${1}.avi

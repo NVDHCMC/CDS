@@ -1,0 +1,3 @@
+source ./devel/setup.bash
+sleep 20
+rosrun I2C_LowLevel test_publisher 30 22
