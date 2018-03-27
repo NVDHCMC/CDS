@@ -2,38 +2,64 @@
 #define UPPER_Y 		100
 #define LOWER_Y 		80
 #define SUM_REQUIRED 	20
+#define ROI_WIDTH 		20
 
 namespace CDIO4_0 {
-	
-	__inline void Processing::duong_solution() {
-	}
-	
-	
-	
-	
-	__inline void Processing::minh_solution() {
-	}
-	
-	__inline void Processing::calc_hist() {
-	}
-	
-	__inline__ void Processing::find_center() {
-		for (int i = 0; i < 128; i++) {
-			for (int j = 0; j < (UPPER_Y - LOWER_Y); j++) {
-				this->histogram.at(i) = 0;
-			}
-		}
-		for (int i = 0; i < 128; i++) {
-			for (int j = 0; j < (UPPER_Y - LOWER_Y); j++) {
-				if (this->img_roi.at<uchar>(j, i, 0) != 0) {
-					this->histogram.at(i) += 1;
+	__inline__ void Processing::calculate_hist() {
+		uint8_t pc = 0; // Point count
+		uint8_t p1 = 0;
+		uint8_t sum = 0; // Hist sum
+
+
+		for (int ite = 0; ite < 2; ite++) {
+			// Fill all vector with 0
+			std::fill(this->histogram_list.at(ite).begin(), this->histogram_list.at(ite).end(), 0);
+
+
+			// Calculate histogram vectors
+			for (int i = 0; i < 128; i++) {
+				for (int j = 0; j < 20; j++) {
+					if (this->img_roi_list.at(ite).at<uchar>(j, i, 0) != 0) {
+						this->histogram_list.at(ite).at(i) += 1;
+					}
 				}
 			}
+
+			// Calculate hot spots
+			for (int i = 0; i < 128; i++) {
+				if (this->histogram_list.at(ite).at(i) != 0) {
+					// Reset sum
+					sum = 0;
+					p1 = i;
+
+					// Continue to sum until it hits zero
+					while ((i < 128) && (this->histogram_list.at(ite).at(i) != 0)) {
+						sum += histogram_list.at(ite).at(i);
+						i++;
+					}
+					
+					// Filtering
+					if (sum > SUM_REQUIRED) {
+						this->hot_spot_list.at(pc).x = (p1 + i - 1);
+						this->hot_spot_list.at(pc).y = (this->roi_list.at(ite).y + 10);
+					}
+				}
+			}
+
+			// Finish calculating hot spots
 		}
+		// Done
+		
+	}
+
+
+
+	__inline__ void Processing::find_center() {
+		// Caculate hist
+		this->calculate_hist();
+
 		// Get the histogram
-		uint8_t pc = 0;
-		uint8_t p1 = 0;
-		uint8_t sum = 0;
+
 		this->center_x_old = this->center_x;
 		unsigned int i = 0;
 		for ( i = 0; i < 128; i++) {

@@ -1,5 +1,6 @@
 #include "Processing.hpp"
-
+#define UPPER_Y 		100
+#define LOWER_Y 		80
 #define WIDTH 			128
 #define TEXT_SCALE 		0.3f
 #define COLOR 
@@ -14,7 +15,7 @@ namespace CDIO4_0 {
 	Processing::Processing(const char * SVM_model_path): 
 		histogram(128, 0), border_value(0, 0, 0), roi(200, 0, 640, 480), 
 		point1(100, 0), point2(100, 0), roi2(0, LOWER_Y, 128, (UPPER_Y - LOWER_Y)),
-		loop_rate(30) {
+		loop_rate(30), img_roi_list(2, cv::Mat()), hot_spot_list(100, cv::Point()), histogram_list(2, std::vector<int>(128, 0)) {
 			
 #ifdef DUONG
 		printf("Now running DUONG's solution\n");
@@ -36,6 +37,7 @@ namespace CDIO4_0 {
 		this->warp_matrix = cv::getPerspectiveTransform(this->warp_src, this->warp_dst);
 		this->kernel 	  = cv::getStructuringElement(cv::MORPH_RECT,cv::Size(3, 3), cv::Point(1, 1));
 		
+		// HOG descriptor init
 		this->hog 		  = {
 			cv::Size(128, 96),
 			cv::Size(16, 16),
@@ -66,6 +68,7 @@ namespace CDIO4_0 {
 			1
 		};
 		
+		// Control params
 		this->kp = 3.0;
 		this->throttle = 40;
 		this->steering_angle = 0.0;
@@ -76,13 +79,29 @@ namespace CDIO4_0 {
 		this->test_image = cv::imread("/home/ubuntu/jupyter/fr_g91.jpg", 0);
 #endif
 		
+		// SVM statistic models
 		this->svm_model = cv::Algorithm::load<cv::ml::SVM>("/home/ubuntu/jupyter/1st_model.xml");
 		this->sign_model = cv::Algorithm::load<cv::ml::SVM>("/home/ubuntu/jupyter/bienbao6.xml");
+
+		// New solution
+		this->roi_list.at(0) = cv::Rect(0, 80, 128, 20);
+		this->roi_list.at(1) = cv::Rect(0, 60, 128, 20);
 	}
 	
+
+
+
+
+
 	Processing::~Processing() {
 	}
 	
+
+
+
+
+
+
 	int Processing::doLoop() {
 		uint8_t key = 0;
 		uint8_t rv = 1;
@@ -125,9 +144,7 @@ namespace CDIO4_0 {
 				cv::imshow("Debug2", this->thresholded);
 				//printf("%f\n", center_x);
 				key = cv::waitKey(1) & 0xff;
-#endif
-				
-#ifdef DEBUG
+#else
 				this->preprocess();
 				this->richtung = this->which_way_to_turn();
 				if (this->richtung == left)
@@ -166,6 +183,10 @@ namespace CDIO4_0 {
 		return rv;
 	}
 	
+
+
+
+
 
 
 

@@ -19,10 +19,12 @@ namespace CDIO4_0 {
 	
 	class Processing {
 	private:
+		// Control params
 		float kp;
 		int throttle;
 		float steering_angle;
-	
+		
+		// Mics
 		std::vector<int> histogram;
 		std::vector<float> point1;
 		std::vector<float> point2;
@@ -31,11 +33,12 @@ namespace CDIO4_0 {
 		std::vector< std::vector<cv::Point> > sign_contours;
 		std::vector<cv::Vec4i> sign_hierarchy;
 		
+		// SVM models
 		cv::Ptr<cv::ml::SVM> svm_model;
 		cv::Ptr<cv::ml::SVM> sign_model;
-		
 		cv::Scalar border_value;
 		
+		// Warp matrices
 		cv::Point2f warp_src[4];
 		cv::Point2f warp_dst[4];
 		cv::Mat warp_matrix;
@@ -46,20 +49,30 @@ namespace CDIO4_0 {
 		cv::HOGDescriptor hog;
 		cv::HOGDescriptor hog2;
 		
+		// Debug
 		cv::Mat test_image;
+		char filename[100];
 		
+		// ROS components
 		ros::NodeHandle control_param;
 		ros::Publisher data;
 		ros::Rate loop_rate;
 		I2C_LowLevel::Control_param ctrl_param;
 		int count;
-		char filename[100];
 		
+		// Functions
 		__inline__ void preprocess();
 		__inline__ void find_center();
 		__inline__ intersection_type is_intersection();
 		__inline__ bool looking_for_sign();
 		__inline__ direction which_way_to_turn();
+
+		// New solution
+		std::vector<cv::Rect> roi_list;
+		std::vector< std::vector<int> > histogram_list;
+		std::vector<cv::Mat> img_roi_list;
+		std::vector<cv::Point> hot_spot_list;
+
 	public:
 		Processing(const char * SVM_model_path = "");
 		~Processing();
@@ -88,6 +101,7 @@ namespace CDIO4_0 {
 		cv::Mat thresholded;
 		cv::Mat img_roi;
 		
+		//
 		float center_x;
 		float center_x_old;
 		intersection_type i_type;
