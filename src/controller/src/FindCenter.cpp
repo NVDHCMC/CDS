@@ -5,7 +5,24 @@
 #define ROI_WIDTH 		20
 
 namespace CDIO4_0 {
-	__inline__ void Processing::calculate_hist() {
+	__inline__ void Processing::preprocess() {
+		cv::copyMakeBorder(this->gray, this->frame, 0, 0, 200, 200, cv::BORDER_CONSTANT, border_value);
+		cv::warpPerspective(this->frame, this->warped_frame, warp_matrix, cv::Size(1040, 480), cv::INTER_LINEAR);
+		cv::resize(this->warped_frame(roi), this->resized_warped, cv::Size(128, 128), cv::INTER_LINEAR);
+		cv::threshold(this->resized_warped, this->thresholded, 220, 0xff, cv::THRESH_BINARY);
+		//cv::erode(this->thresholded, this->thresholded, this->kernel);
+		cv::morphologyEx(this->thresholded, this->thresholded, 0, this->kernel);
+
+		this->img_roi = this->thresholded(roi2);
+		this->img_roi_list.at(0) = this->thresholded(this->roi_list.at(0));
+		this->img_roi_list.at(1) = this->thresholded(this->roi_list.at(1));
+		
+		// Compute hog descriptor vector
+		cv::Rect asd(0, 0, 128, 96);
+		this->hog.compute(this->resized_warped(asd), this->hog_descriptor);
+	}
+
+	__inline__ uint8_t Processing::calculate_hist() {
 		uint8_t pc = 0; // Point count
 		uint8_t p1 = 0;
 		uint8_t sum = 0; // Hist sum
@@ -40,8 +57,9 @@ namespace CDIO4_0 {
 					
 					// Filtering
 					if (sum > SUM_REQUIRED) {
-						this->hot_spot_list.at(pc).x = (p1 + i - 1);
+						this->hot_spot_list.at(pc).x = (p1 + i - 1)/2;
 						this->hot_spot_list.at(pc).y = (this->roi_list.at(ite).y + 10);
+						pc++;
 					}
 				}
 			}
@@ -49,143 +67,66 @@ namespace CDIO4_0 {
 			// Finish calculating hot spots
 		}
 		// Done
+
+		return pc;
 		
 	}
 
+	__inline__ void Processing::find_nearest_hotspot(int pc) {
+		cv::Point temp;
+		int distance;
+		this->current_side.at(1) = 0;
+		this->current_side.at(0) = 0;
+		for(int i = 0; i < pc; i++) {
+			temp = this->hot_spot_list.at(i) - this->last_known_point.at(0);
+			distance = temp.x*temp.x + temp.y*temp.y;
+			if (distance < 400) {
+				cv::circle(this->resized_warped, this->hot_spot_list.at(i), 5, cv::Scalar(0, 0, 0), -1);
+				this->last_known_point.at(0) = this->hot_spot_list.at(i);
+				this->current_side.at(0) = 1;
+			}
+
+			//printf("%d %d %d\n", this->hot_spot_list.at(i).x, this->hot_spot_list.at(i).y, i);
+			temp = this->hot_spot_list.at(i) - this->last_known_point.at(1);
+			distance = temp.x*temp.x + temp.y*temp.y;
+			if (distance < 400) {
+				cv::circle(this->resized_warped, this->hot_spot_list.at(i), 5, cv::Scalar::all(255), -1);
+				this->last_known_point.at(1) = this->hot_spot_list.at(i);
+				this->current_side.at(1) = 1;
+			}
+		}
+	}
+
+	__inline__ void Processing::get_center_pixel(int pc) {
+		this->center_x_old = this->center_x;
+
+
+		if ( (this->current_side.at(0) == 0) && (this->current_side.at(1) == 0) )
+		{
+			this->center_x = this->center_x_old;
+		}
+		else if ( (this->current_side.at(0) == 1) && (this->current_side.at(1) == 1) ) 
+		{
+			this->center_x = (this->last_known_point.at(0).x + this->last_known_point.at(1).x)/2;
+		}
+		else if ( (this->current_side.at(0) == 0) && (this->current_side.at(1) == 1) ) 
+		{
+			
+		}
+		else if( (this->current_side.at(0) == 1) && (this->current_side.at(1) == 0) )
+		{
+			
+		}
+	}
 
 
 	__inline__ void Processing::find_center() {
 		// Caculate hist
-		this->calculate_hist();
+		int pc = 0;
+		pc = this->calculate_hist();
+		this->find_nearest_hotspot(pc);
 
 		// Get the histogram
-
-		this->center_x_old = this->center_x;
-		unsigned int i = 0;
-		for ( i = 0; i < 128; i++) {
-			if (this->histogram.at(i) != 0) {
-				sum = 0;
-				p1 = i;
-				while ((i < 128) && (this->histogram.at(i) != 0)) {
-					sum += histogram.at(i);
-					i++;
-				}
-				
-				if (sum > SUM_REQUIRED) {
-					this->point1.at(pc) = p1;
-					if (i > 0)
-						this->point2.at(pc) = i - 1;
-					else 
-						this->point2.at(pc) = 0;
-					pc++;
-				}
-			}
-		}
-		float center_lanes = 0.0;
-		//printf("1\n");
-		if ((pc == 0)){
-			this->center_x = this->center_x_old;
-		}
-#ifdef DUONG
-		//else if (this->i_type != Straight) {
-			//printf("Junction\n");
-		else if (this->richtung == left) {
-			printf("Left\n");
-			if (pc == 1) {
-				center_lanes = ((float) (this->point1.at(0)+this->point2.at(0)))/2.0;
-				if (center_lanes > 60.0) {
-					this->center_x = (center_lanes + 45.0)/2.0;
-				}
-				else {
-					this->center_x = (center_lanes + 60.0)/2.0;
-				}
-			}
-			else if (pc == 2) {
-				this->center_x = (this->point1.at(0) + this->point1.at(1) + this->point2.at(0) + this->point2.at(1))/4.0;
-				this->center_x = ((this->center_x  + 60.0)/2);
-			}
-		}
-		else if (this->richtung == right) {
-			printf("Right\n");
-			if (pc == 1) {
-				center_lanes = ((float) (this->point1.at(0)+this->point2.at(0)))/2.0;
-				printf("%f\n", center_lanes);
-				if (center_lanes < 68.0) {
-					this->center_x = (center_lanes + 70.0)/2.0;
-				}
-				else {
-					this->center_x = (center_lanes + 64.0)/2.0;
-				}
-			}
-			else if (pc == 2) {
-				this->center_x = (this->point1.at(0) + this->point1.at(1) + this->point2.at(0) + this->point2.at(1))/4.0;
-				this->center_x = ((this->center_x  + 64.0)/2);
-			}
-		}
-		else {
-			if (pc == 1) {
-				center_lanes = ((float) (this->point1.at(0)+this->point2.at(0)))/2.0;
-				if (center_lanes > this->center_x_old) {
-					this->center_x = (center_lanes)/2.0;
-				}
-				else if (center_lanes <= this->center_x_old) {
-					this->center_x = (center_lanes + 128.0)/2.0;
-				}
-			}
-			if (pc == 2) {
-				this->center_x = (this->point1.at(0) + this->point1.at(1) + this->point2.at(0) + this->point2.at(1))/4.0;
-			}
-		}
-#endif
-
-
-/* ------------------------ MINH ------------------------------------*/
-#ifdef OLD
-		else if (pc == 1) {
-			center_lanes = ((float) (this->point1.at(0)+this->point2.at(0)))/2.0;
-			cv::circle(this->thresholded, cv::Point(center_lanes, 90), 4, cv::Scalar(0, 0, 0), -1);
-			
-			cv::circle(this->thresholded, cv::Point(10,10), 4, cv::Scalar(255, 255, 255), -1);
-			//if (this->i_type != Straight) {
-			if ((center_lanes >= 44)&&(center_lanes <= 84)){
-				if (this->richtung == right) {
-					this->center_x = (center_lanes + 128.0)/2.0;
-				}
-				else if (this->richtung == left) {
-					this->center_x = center_lanes/2.0;
-				}
-				else{
-					if ((center_x_old!=0 && (abs(center_x-center_x_old)>20){
-						center_x=center_x_old;
-					}
-				}
-			}
-			//else if (this->i_type == Straight) {
-			else {
-				if (center_lanes > this->center_x_old) {
-					this->center_x = center_lanes/2.0;
-				}
-				else if (center_lanes < this->center_x_old) {
-					this->center_x = (center_lanes+128.0)/2.0;
-				}
-			}
-			char vitri[30];
-			sprintf(vitri, "%f", this->center_x);
-			cv::putText(this->thresholded,vitri,(5,20),cv::FONT_HERSHEY_SIMPLEX, 0.3,cv::Scalar(255, 255, 255),1);
-
-		}
-		else if (pc == 2) {
-			this->center_x = (this->point1.at(0) + this->point1.at(1) + this->point2.at(0) + this->point2.at(1))/4.0;
-		}
-		/*
-		if ((center_x_old!=0 && (abs(center_x-center_x_old)>20){
-			center_x=center_x_old;
-		}
-		*/
-            
-#endif
-
-
-
+		this->get_center_pixel(pc);
 	}
 }

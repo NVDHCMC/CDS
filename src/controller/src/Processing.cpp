@@ -15,7 +15,7 @@ namespace CDIO4_0 {
 	Processing::Processing(const char * SVM_model_path): 
 		histogram(128, 0), border_value(0, 0, 0), roi(200, 0, 640, 480), 
 		point1(100, 0), point2(100, 0), roi2(0, LOWER_Y, 128, (UPPER_Y - LOWER_Y)),
-		loop_rate(30), img_roi_list(2, cv::Mat()), hot_spot_list(100, cv::Point()), histogram_list(2, std::vector<int>(128, 0)) {
+		loop_rate(30), img_roi_list(2, cv::Mat()), hot_spot_list(100, cv::Point()), histogram_list(2, std::vector<int>(128, 0)), current_side(2, 0) {
 			
 #ifdef DUONG
 		printf("Now running DUONG's solution\n");

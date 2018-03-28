@@ -66,12 +66,15 @@ namespace CDIO4_0 {
 		__inline__ intersection_type is_intersection();
 		__inline__ bool looking_for_sign();
 		__inline__ direction which_way_to_turn();
+		__inline__ int calculate_hist();
+		__inline__ void find_nearest_hotspot(int pc);
 
 		// New solution
 		std::vector<cv::Rect> roi_list;
 		std::vector< std::vector<int> > histogram_list;
 		std::vector<cv::Mat> img_roi_list;
 		std::vector<cv::Point> hot_spot_list;
+		std::vector<int> current_side;
 
 	public:
 		Processing(const char * SVM_model_path = "");
